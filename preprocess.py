@@ -5,6 +5,8 @@ import os
 import spacy
 from transformers import BertTokenizer
 import torch
+from tqdm import tqdm
+from time import sleep
 
 MAX_LENGTH = 50
 
@@ -13,7 +15,7 @@ tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False
 
 
 class IsoSpaceEntity:
-    __types = ["NONE", "PAD", "PLACE", "PATH", "SPATIAL_ENTITY", "NONMOTION_EVENT", "MOTION", "SPATIAL_SIGNAL",
+    __types = ["PAD", "NONE", "PLACE", "PATH", "SPATIAL_ENTITY", "NONMOTION_EVENT", "MOTION", "SPATIAL_SIGNAL",
                "MOTION_SIGNAL", "MEASURE"]
 
     __tag2label = {t: i for i, t in enumerate(__types)}
@@ -35,14 +37,19 @@ class IsoSpaceEntity:
     def label_to_tag(label):
         return IsoSpaceEntity.__types[label]
 
+    @staticmethod
+    def n_types():
+        return len(IsoSpaceEntity.__types)
+
 
 class AnnotatedTextDataset(Dataset):
 
     def __init__(self):
         self.sentences = []
         xml_files = glob.glob(os.path.join("data", "**", "*.xml"), recursive=True)
-        longer = 0
-        for xml_file in xml_files:
+        print("\nExtracting xml files...")
+        sleep(0.1)
+        for xml_file in tqdm(xml_files):
             tree = ET.parse(xml_file)
             iso_space_entities = [IsoSpaceEntity(tag) for tag in tree.find("TAGS")]
             text = tree.find("TEXT").text
@@ -50,7 +57,7 @@ class AnnotatedTextDataset(Dataset):
                 current_sentence = []
                 for word in sentence:
                     if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]:
-                        label = next((ise.label for ise in iso_space_entities if word.idx in ise.interval), 0)
+                        label = next((ise.label for ise in iso_space_entities if word.idx in ise.interval), 1)
                         tokens = tokenizer.tokenize(word.text)
                         token_ids = tokenizer.convert_tokens_to_ids(tokens)
                         current_sentence.extend([(token_id, label) for token_id in token_ids])
@@ -58,15 +65,17 @@ class AnnotatedTextDataset(Dataset):
                 if length > MAX_LENGTH:
                     current_sentence = current_sentence[:MAX_LENGTH]
                 else:
-                    current_sentence += [(0, 1)] * (MAX_LENGTH - length)
+                    current_sentence += [(0, 0)] * (MAX_LENGTH - length)
                 self.sentences.append(current_sentence)
+        print("\n")
         pass
 
     def __getitem__(self, idx):
         sentence = self.sentences[idx]
         token_ids = [token_id for token_id, label in sentence]
         labels = [label for token_id, label in sentence]
-        return torch.tensor([token_ids, labels])
+        attention_mask = [int(label != 0) for token_id, label in sentence]
+        return torch.tensor([token_ids, labels, attention_mask])
 
     def __len__(self):
         return len(self.sentences)
