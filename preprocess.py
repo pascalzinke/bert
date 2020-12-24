@@ -7,8 +7,12 @@ from transformers import BertTokenizer
 import torch
 from tqdm import tqdm
 from time import sleep
+import numpy as np
 
 MAX_LENGTH = 50
+MAKE_DATA = False
+
+data_path = os.path.join("data", "data.npy")
 
 nlp = spacy.load("en_core_web_sm")
 tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
@@ -45,29 +49,34 @@ class IsoSpaceEntity:
 class AnnotatedTextDataset(Dataset):
 
     def __init__(self):
-        self.sentences = []
-        xml_files = glob.glob(os.path.join("data", "**", "*.xml"), recursive=True)
-        print("\nExtracting xml files...")
-        sleep(0.1)
-        for xml_file in tqdm(xml_files):
-            tree = ET.parse(xml_file)
-            iso_space_entities = [IsoSpaceEntity(tag) for tag in tree.find("TAGS")]
-            text = tree.find("TEXT").text
-            for sentence in nlp(text).sents:
-                current_sentence = []
-                for word in sentence:
-                    if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]:
-                        label = next((ise.label for ise in iso_space_entities if word.idx in ise.interval), 1)
-                        tokens = tokenizer.tokenize(word.text)
-                        token_ids = tokenizer.convert_tokens_to_ids(tokens)
-                        current_sentence.extend([(token_id, label) for token_id in token_ids])
-                length = len(current_sentence)
-                if length > MAX_LENGTH:
-                    current_sentence = current_sentence[:MAX_LENGTH]
-                else:
-                    current_sentence += [(0, 0)] * (MAX_LENGTH - length)
-                self.sentences.append(current_sentence)
-        print("\n")
+        if MAKE_DATA:
+            sentences = []
+            xml_files = glob.glob(os.path.join("data", "**", "*.xml"), recursive=True)
+            print("\nExtracting xml files...")
+            sleep(0.1)
+            for xml_file in tqdm(xml_files):
+                tree = ET.parse(xml_file)
+                iso_space_entities = [IsoSpaceEntity(tag) for tag in tree.find("TAGS")]
+                text = tree.find("TEXT").text
+                for sentence in nlp(text).sents:
+                    current_sentence = []
+                    for word in sentence:
+                        if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]:
+                            label = next((ise.label for ise in iso_space_entities if word.idx in ise.interval), 1)
+                            tokens = tokenizer.tokenize(word.text)
+                            token_ids = tokenizer.convert_tokens_to_ids(tokens)
+                            current_sentence.extend([(token_id, label) for token_id in token_ids])
+                    length = len(current_sentence)
+                    if length > MAX_LENGTH:
+                        current_sentence = current_sentence[:MAX_LENGTH]
+                    else:
+                        current_sentence += [(0, 0)] * (MAX_LENGTH - length)
+                    sentences.append(current_sentence)
+            print("\n")
+            self.sentences = np.array(sentences)
+            np.save(data_path, self.sentences)
+        else:
+            self.sentences = np.load(data_path)
         pass
 
     def __getitem__(self, idx):

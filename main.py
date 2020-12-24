@@ -1,7 +1,9 @@
 from preprocess import AnnotatedTextDataset, IsoSpaceEntity
 from torch.utils.data import DataLoader, random_split
 import torch
-from transformers import BertForTokenClassification, AdamW
+from transformers import BertForTokenClassification, AdamW, get_linear_schedule_with_warmup
+from tqdm import trange
+from torch.nn.utils import clip_grad_norm_
 
 BATCH_SIZE = 10
 EPOCHS = 3
@@ -29,3 +31,34 @@ model = BertForTokenClassification.from_pretrained(
     output_attentions=False,
     output_hidden_states=False
 )
+
+optimizer = AdamW(
+    [{"params": [p for n, p in list(model.classifier.named_parameters())]}],
+    lr=3e-5,
+    eps=1e-8
+)
+
+scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=0,
+    num_training_steps=len(train_loader) * EPOCHS
+)
+
+for _ in trange(EPOCHS):
+    model.train()
+    total_loss = 0
+    for batch in train_loader:
+        token_ids = batch[:, 0, :]
+        labels = batch[:, 1, :]
+        attention_mask = batch[:, 2, :]
+        model.zero_grad()
+        outputs = model(token_ids, labels=labels, attention_mask=attention_mask)
+        loss = outputs[0]
+        loss.backward()
+        total_loss += loss.item()
+        clip_grad_norm_(parameters=model.parameters(), max_norm=1.)
+        optimizer.step()
+        scheduler.step()
+    avg_train_loss = total_loss / len(train_loader)
+    print("Average train loss: {}".format(avg_train_loss))
+
