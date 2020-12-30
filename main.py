@@ -8,14 +8,15 @@ from torch.nn.utils import clip_grad_norm_
 BATCH_SIZE = 10
 EPOCHS = 3
 
-dataset = AnnotatedTextDataset()
 
-train_size = int(0.9 * len(dataset))
+dataset = AnnotatedTextDataset()  # Use data from preprocess
+
+train_size = int(0.9 * len(dataset))  # Train with 90% of data
 test_size = len(dataset) - train_size
 
-train_set, test_set = random_split(dataset, [train_size, test_size])
+train_set, test_set = random_split(dataset, [train_size, test_size])  # generate data set
 
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE)
+train_loader = DataLoader(train_set, batch_size=BATCH_SIZE)  # loading data
 test_loader = DataLoader(test_set, batch_size=BATCH_SIZE)
 
 if torch.cuda.is_available():
@@ -25,26 +26,26 @@ else:
     device = torch.device("cpu")
     print("Running on CPU")
 
-model = BertForTokenClassification.from_pretrained(
+model = BertForTokenClassification.from_pretrained(  # setup bert model
     "bert-base-cased",
     num_labels=IsoSpaceEntity.n_types(),
     output_attentions=False,
     output_hidden_states=False
 )
 
-optimizer = AdamW(
+optimizer = AdamW(  # AdamW optimizer
     [{"params": [p for n, p in list(model.classifier.named_parameters())]}],
     lr=3e-5,
     eps=1e-8
 )
 
-scheduler = get_linear_schedule_with_warmup(
+scheduler = get_linear_schedule_with_warmup(  # Scheduler to reduce learning rate throughout epochs
     optimizer,
     num_warmup_steps=0,
     num_training_steps=len(train_loader) * EPOCHS
 )
 
-for _ in trange(EPOCHS):
+for _ in trange(EPOCHS):  # Training of model
     model.train()
     total_loss = 0
     for batch in train_loader:
