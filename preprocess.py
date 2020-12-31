@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 import glob
 import os
 import spacy
-from transformers import BertTokenizer
 import torch
 from tqdm import tqdm
 from time import sleep
@@ -15,7 +14,6 @@ MAKE_DATA = False
 data_path = os.path.join("data", "data.npy")
 
 nlp = spacy.load("en_core_web_sm")
-tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
 
 
 class IsoSpaceEntity:
@@ -48,7 +46,7 @@ class IsoSpaceEntity:
 
 class AnnotatedTextDataset(Dataset):
 
-    def __init__(self):
+    def __init__(self, tokenizer):
         if MAKE_DATA:
             sentences = []
             xml_files = glob.glob(os.path.join("data", "**", "*.xml"), recursive=True)
@@ -81,10 +79,10 @@ class AnnotatedTextDataset(Dataset):
 
     def __getitem__(self, idx):
         sentence = self.sentences[idx]
-        token_ids = [token_id for token_id, label in sentence]
-        labels = [label for token_id, label in sentence]
-        attention_mask = [int(label != 0) for token_id, label in sentence]
-        return torch.tensor([token_ids, labels, attention_mask])
+        token_ids = torch.tensor([token_id for token_id, label in sentence], dtype=torch.long)
+        labels = torch.tensor([label for token_id, label in sentence], dtype=torch.long)
+        attention_mask = torch.tensor([int(label != 0) for token_id, label in sentence], dtype=torch.long)
+        return token_ids, labels, attention_mask
 
     def __len__(self):
         return len(self.sentences)
