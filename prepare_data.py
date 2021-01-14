@@ -1,12 +1,10 @@
 import torch
 from torch.utils.data import DataLoader, random_split
-from transformers import BertTokenizer
 
 from preprocess import AnnotatedTextDataset
 from constants import BATCH_SIZE, TRAIN_LOADER_PATH, TEST_LOADER_PATH
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
-dataset = AnnotatedTextDataset(tokenizer)
+dataset = AnnotatedTextDataset()
 
 train_size = int(0.9 * len(dataset))
 test_size = len(dataset) - train_size

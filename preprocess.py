@@ -7,13 +7,14 @@ import torch
 from tqdm import tqdm
 from time import sleep
 import numpy as np
+from transformers import BertTokenizer
 
 MAX_LENGTH = 50
 
 data_path = os.path.join("data", "data.npy")
 
 nlp = spacy.load("en_core_web_sm")
-
+tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
 
 class IsoSpaceEntity:
     __types = ["PAD", "NONE", "PLACE", "PATH", "SPATIAL_ENTITY", "NONMOTION_EVENT", "MOTION", "SPATIAL_SIGNAL",
@@ -45,7 +46,7 @@ class IsoSpaceEntity:
 
 class AnnotatedTextDataset(Dataset):
 
-    def __init__(self, tokenizer):
+    def __init__(self):
         sentences = []
         xml_files = glob.glob(os.path.join("data", "**", "*.xml"), recursive=True)
         print("\nExtracting xml files...")
