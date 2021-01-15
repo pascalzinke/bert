@@ -16,6 +16,7 @@ data_path = os.path.join("data", "data.npy")
 nlp = spacy.load("en_core_web_sm")
 tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
 
+
 class IsoSpaceEntity:
     __types = ["PAD", "NONE", "PLACE", "PATH", "SPATIAL_ENTITY", "NONMOTION_EVENT", "MOTION", "SPATIAL_SIGNAL",
                "MOTION_SIGNAL", "MEASURE"]
