@@ -1,5 +1,3 @@
 .idea
 venv
-model.pt
-test_loader.pt
-train_loader.pt
+cache
