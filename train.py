@@ -16,8 +16,6 @@ eval_set = AnnotatedDataset("eval")
 train_loader = DataLoader(train_set, batch_size=BATCH)
 eval_loader = DataLoader(eval_set, batch_size=BATCH)
 
-# for attribute in [Tag, Dimensionality, Form, SemanticType, MotionType,
-#                   MotionClass]:
-#     train_model(attribute, train_loader, eval_loader, device)
-
-train_model(Tag, train_loader, eval_loader, device, epochs=12)
+for attribute in [Tag, Dimensionality, Form, SemanticType, MotionType,
+                  MotionClass]:
+    train_model(attribute, train_loader, eval_loader, device)
