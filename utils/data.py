@@ -9,7 +9,8 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import BertTokenizer
 
-from utils.isospace import IsoSpaceEntity
+from utils.isospace import Entity, Tag, Dimensionality, Form, SemanticType, \
+    MotionType, MotionClass
 
 MAX_LENGTH = 50
 
@@ -33,7 +34,7 @@ def extract_data(data_type):
         tree = ET.parse(xml_file)
 
         # initialize iso space helper entities from annotated xml tags
-        iso_space_entities = [IsoSpaceEntity(tag) for tag in tree.find("TAGS")]
+        entities = [Entity(tag) for tag in tree.find("TAGS")]
 
         # tokenize test with spacy
         text = tree.find("TEXT").text
@@ -44,8 +45,9 @@ def extract_data(data_type):
                 # filter non words
                 if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]:
                     # find corresponding iso space entity
-                    label = next((ise.label for ise in iso_space_entities if
-                                  word.idx in ise.interval), 1)
+                    entity = next(
+                        (e for e in entities if
+                         word.idx in e.interval), Entity(None))
 
                     # create embeddings
                     tokens = tokenizer.tokenize(word.text)
@@ -53,11 +55,27 @@ def extract_data(data_type):
 
                     # append token-label pair to sentence
                     current_sentence.extend(
-                        [[token_id, label] for token_id in token_ids]
+                        [[
+                            token_id,
+                            entity.tag,
+                            entity.dimensionality,
+                            entity.form,
+                            entity.semantic_type,
+                            entity.motion_type,
+                            entity.motion_class,
+                        ] for token_id in token_ids]
                     )
 
             # pad/cut sentences to constant size
-            sentences.append(pad_sentence(current_sentence, [0, 0]))
+            sentences.append(pad_sentence(current_sentence, [
+                0,
+                Tag.pad,
+                Dimensionality.pad,
+                Form.pad,
+                SemanticType.pad,
+                MotionType.pad,
+                MotionClass.pad,
+            ]))
 
     # save extracted data to file
     data = np.array(sentences)
@@ -75,8 +93,7 @@ def pad_sentence(sentence, padding):
     return (
         sentence[:MAX_LENGTH]
         if length > MAX_LENGTH
-        else sentence + [padding] * (MAX_LENGTH - length)
-    )
+        else sentence + [padding] * (MAX_LENGTH - length))
 
 
 class AnnotatedDataset(Dataset):
@@ -87,28 +104,28 @@ class AnnotatedDataset(Dataset):
         self.sentences = (
             np.load(path)
             if os.path.isfile(path)
-            else extract_data(data_type)
-        )
+            else extract_data(data_type))
         pass
 
     def __getitem__(self, idx):
         # get sentence
         sentence = self.sentences[idx]
-
-        # get embeddings and labels for sentence
-        token_ids = torch.tensor(
-            [token_id for token_id, label in sentence], dtype=torch.long
+        ids = torch.tensor(sentence[:, 0], dtype=torch.long)
+        return (
+            ids,
+            sentence_to_tensor(sentence, Tag),
+            sentence_to_tensor(sentence, Dimensionality),
+            sentence_to_tensor(sentence, Form),
+            sentence_to_tensor(sentence, SemanticType),
+            sentence_to_tensor(sentence, MotionType),
+            sentence_to_tensor(sentence, MotionClass),
+            torch.tensor([int(i != 0) for i in ids], dtype=torch.long)
         )
-        labels = torch.tensor(
-            [label for token_id, label in sentence], dtype=torch.long
-        )
-
-        # mask sentence padding
-        attention_mask = torch.tensor(
-            [int(label != 0) for label in labels], dtype=torch.long
-        )
-        return token_ids, labels, attention_mask
 
     def __len__(self):
         # get length of dataset
         return len(self.sentences)
+
+
+def sentence_to_tensor(sentence, attribute):
+    return torch.tensor(sentence[:, attribute.index], dtype=torch.long)

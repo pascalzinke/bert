@@ -1,47 +1,102 @@
-class IsoSpaceEntity:
-    __types = [
-        "PAD",
-        "NONE",
-        "PLACE",
-        "PATH",
-        "SPATIAL_ENTITY",
-        "LOCATION",
-        "MOTION",
-        "SPATIAL_SIGNAL",
-        "MOTION_SIGNAL",
-        "MEASURE"
-    ]
+PAD = "PAD"
+NONE = "NONE"
 
-    __tag2label = {t: i for i, t in enumerate(__types)}
 
+class Attribute:
+    def __init__(self, index, name, values):
+        self.index = index
+        self.name = name
+        self.__values = [PAD, NONE] + values
+        self.__value_dict = {value: i for i, value in enumerate(self.__values)}
+        self.n = len(self.__values)
+        self.none = self.encode(NONE)
+        self.pad = self.encode(PAD)
+
+    def encode(self, value):
+        value = value if value in self.__values else NONE
+        return self.__value_dict[value]
+
+    def decode(self, i):
+        value = self.__values[i]
+        return value if value not in [PAD, NONE] else ""
+
+    def is_padding(self, i):
+        return self.decode(i) == PAD
+
+
+Tag = Attribute(1, "tag", [
+    "PLACE",
+    "PATH",
+    "SPATIAL_ENTITY",
+    "LOCATION",
+    "MOTION",
+    "SPATIAL_SIGNAL",
+    "MOTION_SIGNAL",
+    "MEASURE"
+])
+
+Dimensionality = Attribute(2, "dimensionality", [
+    "POINT",
+    "AREA",
+    "VOLUME"
+])
+
+Form = Attribute(3, "form", [
+    "NOM",
+    "NAM"
+])
+
+SemanticType = Attribute(4, "semantic type", [
+    "TOPOLOGICAL",
+    "DIRECTIONAL",
+    "DIR_TOP"
+])
+
+MotionType = Attribute(5, "motion type", [
+    "PATH",
+    "COMPOUND",
+    "MANNER"
+])
+
+MotionClass = Attribute(6, "motion class", [
+    "REACH",
+    "CROSS",
+    "MOVE",
+    "MOVE_INTERNAL",
+    "MOVE_EXTERNAL",
+    "FOLLOW",
+    "DEVIATE"
+])
+
+
+class Entity:
     def __init__(self, tag):
-        self.label = (
-            self.tag_to_label(tag.tag)
-            if tag.tag in IsoSpaceEntity.__types
-            else 0)
-        self.id = tag.get("id")
-        self.text = tag.get("text")
-        start, end = tag.get("start"), tag.get("end")
-        self.start = int(start) if start else None
-        self.end = int(end) if end else None
-        self.interval = (
-            range(self.start, self.end)
-            if self.start and self.end
-            else [])
+        if tag is None:
+            self.tag = Tag.none
+            self.dimensionality = Dimensionality.none
+            self.form = Form.none
+            self.semantic_type = SemanticType.none
+            self.motion_type = MotionType.none
+            self.motion_class = MotionClass.none
 
-    @staticmethod
-    def tag_to_label(tag):
-        return next(
-            label for label, t in enumerate(IsoSpaceEntity.__types) if tag == t)
+        else:
+            self.id = tag.get("id")
+            self.text = tag.get("text")
 
-    @staticmethod
-    def label_to_tag(label):
-        return IsoSpaceEntity.__types[label]
+            # extract training labels
+            self.tag = Tag.encode(tag.tag)
+            self.dimensionality = Dimensionality.encode(
+                tag.get("dimensionality"))
+            self.form = Form.encode(tag.get("form"))
+            self.semantic_type = SemanticType.encode(tag.get("semantic_type"))
+            self.motion_type = MotionType.encode(tag.get("motion_type"))
+            self.motion_class = MotionClass.encode(tag.get("motion_class"))
 
-    @staticmethod
-    def n_types():
-        return len(IsoSpaceEntity.__types)
-
-    @staticmethod
-    def is_padding(label):
-        return IsoSpaceEntity.label_to_tag(label) == "PAD"
+            # Used for mapping NLP token to isospace entities
+            start, end = tag.get("start"), tag.get("end")
+            self.start = int(start) if start else None
+            self.end = int(end) if end else None
+            self.interval = (
+                range(self.start, self.end)
+                if self.start and self.end
+                else [])
