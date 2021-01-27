@@ -20,8 +20,12 @@ loader = DataLoader(dataset, batch_size=BATCH)
 param_optimizer = list(model.named_parameters())
 no_decay = ['bias', 'gamma', 'beta']
 optimizer_grouped_parameters = [
-    {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay_rate': 0.01},
-    {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay_rate': 0.0}
+    {'params': [p for n, p in param_optimizer if
+                not any(nd in n for nd in no_decay)],
+     'weight_decay_rate': 0.01},
+    {'params': [p for n, p in param_optimizer if
+                any(nd in n for nd in no_decay)],
+     'weight_decay_rate': 0.0}
 ]
 optimizer = AdamW(optimizer_grouped_parameters, lr=3e-5, eps=1e-8)
 scheduler = get_linear_schedule_with_warmup(
@@ -37,7 +41,8 @@ for epoch in range(EPOCHS):
         batch = tuple(t.to(device) for t in batch)
         token_ids_batch, labels_batch, attention_mask_batch = batch
         model.zero_grad()
-        outputs = model(token_ids_batch, labels=labels_batch, attention_mask=attention_mask_batch)
+        outputs = model(token_ids_batch, labels=labels_batch,
+                        attention_mask=attention_mask_batch)
         loss = outputs[0]
         loss.backward()
         total_loss += loss.item()

@@ -38,7 +38,8 @@ def evaluate_model(model, device):
         token_ids_batch, labels_batch, attention_mask_batch = batch
 
         with torch.no_grad():
-            outputs = model(token_ids_batch, token_type_ids=None, attention_mask=attention_mask_batch,
+            outputs = model(token_ids_batch, token_type_ids=None,
+                            attention_mask=attention_mask_batch,
                             labels=labels_batch)
         logits = outputs[1].detach().cpu().numpy()
         pred_batch.extend([list(p) for p in np.argmax(logits, axis=2)])

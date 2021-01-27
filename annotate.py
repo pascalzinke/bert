@@ -7,12 +7,15 @@ from utils.isospace import IsoSpaceEntity
 
 model = load_model()
 
-sentence = "Inside the room are three windows and next to the door is a big painting on the wall."
+sentence = "Inside the room are three windows and next to the door is a big " \
+           "painting on the wall. "
 
 nlp = spacy.load("en_core_web_sm")
-tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
+tokenizer = BertTokenizer.from_pretrained('bert-base-cased',
+                                          do_lower_case=False)
 
-words = [word for word in nlp(sentence) if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]]
+words = [word for word in nlp(sentence) if
+         word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]]
 
 input_ids = torch.tensor([tokenizer.encode(sentence)])
 
