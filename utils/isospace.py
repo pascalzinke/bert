@@ -17,8 +17,7 @@ class Attribute:
         return self.__value_dict[value]
 
     def decode(self, i):
-        value = self.__values[i]
-        return value if value not in [PAD, NONE] else ""
+        return self.__values[i]
 
     def is_padding(self, i):
         return self.decode(i) == PAD

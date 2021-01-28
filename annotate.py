@@ -18,6 +18,13 @@ def annotate(model, input_ids):
     return np.argmax(output[0].cpu().numpy(), axis=2).flatten()
 
 
+def format_attribute(attribute, label):
+    value = attribute.decode(label)
+    return ("{}: {}".format(attribute.name, value)
+            if label not in [attribute.none, attribute.pad]
+            else False)
+
+
 device = torch.device("cpu")
 
 tag_model = load_model(Tag)
@@ -55,14 +62,22 @@ for sentence in sentences:
     sts = annotate(semantic_type_model, ids)
     mts = annotate(motion_type_model, ids)
     mcs = annotate(motion_class_model, ids)
-    for token, ta, di, fo, st, mt, mc in zip(tokens, tas, dis, fos, sts, mts, mcs):
-        print(
-            "{:<16}".format(token),
-            Tag.decode(ta),
-            Dimensionality.decode(di),
-            Form.decode(fo),
-            SemanticType.decode(st),
-            MotionType.decode(mt),
-            MotionClass.decode(mc),
-        )
+    words = []
+    annotations = []
+    for token, ta, di, fo, st, mt, mc in zip(tokens, tas, dis, fos, sts, mts,
+                                             mcs):
+        if token.startswith("##"):
+            words[-1] = words[-1] + token[2:]
+        else:
+            words.append(token)
+            annotations.append(", ".join([attribute for attribute in [
+                format_attribute(Tag, ta),
+                format_attribute(Dimensionality, di),
+                format_attribute(Form, fo),
+                format_attribute(SemanticType, st),
+                format_attribute(MotionType, mt),
+                format_attribute(MotionClass, mc),
+            ] if attribute]))
+    for word, annotation in zip(words, annotations):
+        print("{:16s} {}".format(word, annotation))
     print()
