@@ -3,8 +3,8 @@ from torch.utils.data import DataLoader
 from utils.cuda import get_device
 from utils.data import AnnotatedDataset
 from utils.train import train_model
-from utils.isospace import Tag, Dimensionality, Form, SemanticType, MotionType, \
-    MotionClass
+from utils.isospace import Tag, Dimensionality, Form, SemanticType, \
+    MotionType, MotionClass
 
 BATCH = 8
 

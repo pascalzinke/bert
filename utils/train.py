@@ -8,6 +8,8 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from utils.model import initialize_model, save_model
 
+from sklearn.metrics import classification_report
+
 
 def train_model(attribute, train_loader, eval_loader, device, epochs=4):
     print("Training {} model".format(attribute.name))
@@ -55,7 +57,8 @@ def train_model(attribute, train_loader, eval_loader, device, epochs=4):
             total_loss += loss.item()
 
         model.eval()
-        correct, total = 0, 0
+        pred_labels = []
+        true_labels = []
         for batch in eval_loader:
             batch = tuple(t.to(device) for t in batch)
             b_ids = batch[0]
@@ -68,16 +71,16 @@ def train_model(attribute, train_loader, eval_loader, device, epochs=4):
                                 labels=b_labels)
             logits = outputs[1].cpu().numpy()
 
-            pred_labels = np.argmax(logits, axis=2).flatten()
-            true_labels = b_labels.detach().cpu().numpy().flatten()
-            for pred_label, true_label in zip(pred_labels, true_labels):
+            pred_labels_with_mask = np.argmax(logits, axis=2).flatten()
+            true_labels_with_mask = b_labels.detach().cpu().numpy().flatten()
+            for pred_label, true_label in zip(pred_labels_with_mask,
+                                              true_labels_with_mask):
                 if true_label != 0:
-                    total += 1
-                    if pred_label == true_label:
-                        correct += 1
+                    pred_labels.append(pred_label)
+                    true_labels.append(true_label)
 
-        print("Loss:     {:.2%}".format(total_loss / len(train_loader)))
-        print("Accuracy: {:.2%}".format(correct / total))
+        print("Loss:      {:.2%}".format(total_loss / len(train_loader)))
+        print(classification_report(true_labels, pred_labels))
+
+        save_model(model, attribute)
         sleep(0.1)
-
-    save_model(model, attribute)
