@@ -3,61 +3,60 @@ NONE = "NONE"
 
 
 class Attribute:
-    def __init__(self, index, name, values):
-        self.index = index
-        self.name = name
-        self.__values = [PAD, NONE] + values
-        self.__value_dict = {value: i for i, value in enumerate(self.__values)}
-        self.n = len(self.__values)
+    def __init__(self, name, values):
+        self.id = name
+        self.values = [PAD, NONE] + values
+        self.__value_dict = {value: i for i, value in enumerate(self.values)}
+        self.num_values = len(self.values)
         self.none = self.encode(NONE)
         self.pad = self.encode(PAD)
+        self.encoded_values = [self.encode(v) for v in self.values]
 
     def encode(self, value):
-        value = value if value in self.__values else NONE
+        value = value if value in self.values else NONE
         return self.__value_dict[value]
 
     def decode(self, i):
-        return self.__values[i]
+        return self.values[i]
 
     def is_padding(self, i):
         return self.decode(i) == PAD
 
 
-Tag = Attribute(1, "tag", [
+SpatialElement = Attribute("spatial_element", [
     "PLACE",
     "PATH",
     "SPATIAL_ENTITY",
-    "LOCATION",
     "MOTION",
     "SPATIAL_SIGNAL",
     "MOTION_SIGNAL",
     "MEASURE"
 ])
 
-Dimensionality = Attribute(2, "dimensionality", [
+Dimensionality = Attribute("dimensionality", [
     "POINT",
     "AREA",
     "VOLUME"
 ])
 
-Form = Attribute(3, "form", [
+Form = Attribute("form", [
     "NOM",
     "NAM"
 ])
 
-SemanticType = Attribute(4, "semantic type", [
+SemanticType = Attribute("semantic_type", [
     "TOPOLOGICAL",
     "DIRECTIONAL",
     "DIR_TOP"
 ])
 
-MotionType = Attribute(5, "motion type", [
+MotionType = Attribute("motion_type", [
     "PATH",
     "COMPOUND",
     "MANNER"
 ])
 
-MotionClass = Attribute(6, "motion class", [
+MotionClass = Attribute("motion_class", [
     "REACH",
     "CROSS",
     "MOVE",
@@ -71,7 +70,7 @@ MotionClass = Attribute(6, "motion class", [
 class Entity:
     def __init__(self, tag):
         if tag is None:
-            self.tag = Tag.none
+            self.spatial_element = SpatialElement.none
             self.dimensionality = Dimensionality.none
             self.form = Form.none
             self.semantic_type = SemanticType.none
@@ -83,7 +82,7 @@ class Entity:
             self.text = tag.get("text")
 
             # extract training labels
-            self.tag = Tag.encode(tag.tag)
+            self.spatial_element = SpatialElement.encode(tag.tag)
             self.dimensionality = Dimensionality.encode(
                 tag.get("dimensionality"))
             self.form = Form.encode(tag.get("form"))

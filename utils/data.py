@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import BertTokenizer
 
-from utils.isospace import Entity, Tag, Dimensionality, Form, SemanticType, \
+from utils.isospace import Entity, SpatialElement, Dimensionality, Form, SemanticType, \
     MotionType, MotionClass
 
 MAX_LENGTH = 50
@@ -57,7 +57,7 @@ def extract_data(data_type):
                     current_sentence.extend(
                         [[
                             token_id,
-                            entity.tag,
+                            entity.spatial_element,
                             entity.dimensionality,
                             entity.form,
                             entity.semantic_type,
@@ -69,7 +69,7 @@ def extract_data(data_type):
             # pad/cut sentences to constant size
             sentences.append(pad_sentence(current_sentence, [
                 0,
-                Tag.pad,
+                SpatialElement.pad,
                 Dimensionality.pad,
                 Form.pad,
                 SemanticType.pad,
@@ -111,21 +111,19 @@ class AnnotatedDataset(Dataset):
         # get sentence
         sentence = self.sentences[idx]
         ids = torch.tensor(sentence[:, 0], dtype=torch.long)
-        return (
-            ids,
-            sentence_to_tensor(sentence, Tag),
-            sentence_to_tensor(sentence, Dimensionality),
-            sentence_to_tensor(sentence, Form),
-            sentence_to_tensor(sentence, SemanticType),
-            sentence_to_tensor(sentence, MotionType),
-            sentence_to_tensor(sentence, MotionClass),
-            torch.tensor([int(i != 0) for i in ids], dtype=torch.long)
-        )
+        return {
+            "token_ids": ids,
+            "mask": torch.tensor([int(i != 0) for i in ids], dtype=torch.long),
+            SpatialElement.id: torch.tensor(sentence[:, 1], dtype=torch.long),
+            Dimensionality.id: torch.tensor(sentence[:, 2], dtype=torch.long),
+            Form.id: torch.tensor(sentence[:, 3], dtype=torch.long),
+            SemanticType.id: torch.tensor(sentence[:, 4], dtype=torch.long),
+            MotionType.id: torch.tensor(sentence[:, 5], dtype=torch.long),
+            MotionClass.id: torch.tensor(sentence[:, 6], dtype=torch.long),
+        }
 
     def __len__(self):
         # get length of dataset
+
         return len(self.sentences)
 
-
-def sentence_to_tensor(sentence, attribute):
-    return torch.tensor(sentence[:, attribute.index], dtype=torch.long)

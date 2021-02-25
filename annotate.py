@@ -7,32 +7,14 @@ import spacy
 import torch
 from transformers import BertTokenizer
 
-from utils.isospace import Tag, Dimensionality, Form, SemanticType, MotionType, \
-    MotionClass
-from utils.model import load_model
+from utils.isospace import SpatialElement, Dimensionality, Form, SemanticType, \
+    MotionType, MotionClass
+from utils.model import BertForSpatialElementClassification
 
-
-def annotate(model, input_ids):
-    with torch.no_grad():
-        output = model(input_ids)
-    return np.argmax(output[0].cpu().numpy(), axis=2).flatten()
-
-
-def format_attribute(attribute, label):
-    value = attribute.decode(label)
-    return ("{}: {}".format(attribute.name, value)
-            if label not in [attribute.none, attribute.pad]
-            else False)
-
+model = BertForSpatialElementClassification()
+model.load()
 
 device = torch.device("cpu")
-
-tag_model = load_model(Tag)
-dimensionality_model = load_model(Dimensionality)
-form_model = load_model(Form)
-semantic_type_model = load_model(SemanticType)
-motion_type_model = load_model(MotionType)
-motion_class_model = load_model(MotionClass)
 
 nlp = spacy.load("en_core_web_sm")
 tokenizer = BertTokenizer.from_pretrained('bert-base-cased',
@@ -56,28 +38,24 @@ for sentence in sentences:
     token_ids = tokenizer.convert_tokens_to_ids(tokens)
     ids = torch.tensor([token_ids], dtype=torch.long)
 
-    tas = annotate(tag_model, ids)
-    dis = annotate(dimensionality_model, ids)
-    fos = annotate(form_model, ids)
-    sts = annotate(semantic_type_model, ids)
-    mts = annotate(motion_type_model, ids)
-    mcs = annotate(motion_class_model, ids)
+    spatial_element_logits, dimensionality_logits = model(ids)
+
+    spatial_elements = np.argmax(spatial_element_logits.detach().numpy(), axis=2).flatten()
+    dimensionalities = np.argmax(dimensionality_logits.detach().numpy(), axis=2).flatten()
     words = []
     annotations = []
-    for token, ta, di, fo, st, mt, mc in zip(tokens, tas, dis, fos, sts, mts,
-                                             mcs):
+    for token, spatial_element, dimensionality in zip(tokens, spatial_elements,
+                                                      dimensionalities):
         if token.startswith("##"):
             words[-1] = words[-1] + token[2:]
         else:
             words.append(token)
-            annotations.append(", ".join([attribute for attribute in [
-                format_attribute(Tag, ta),
-                format_attribute(Dimensionality, di),
-                format_attribute(Form, fo),
-                format_attribute(SemanticType, st),
-                format_attribute(MotionType, mt),
-                format_attribute(MotionClass, mc),
-            ] if attribute]))
+            annotation = ""
+            if spatial_element != SpatialElement.none:
+                annotation += SpatialElement.decode(spatial_element)
+            if dimensionality != Dimensionality.none:
+                annotation += Dimensionality.decode(dimensionality)
+            annotations.append(annotation)
     for word, annotation in zip(words, annotations):
         print("{:16s} {}".format(word, annotation))
     print()
