@@ -9,10 +9,12 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import BertTokenizer
 
-from utils.isospace import Entity, SpatialElement, Dimensionality, Form, SemanticType, \
+from utils.isospace import Entity, SpatialElement, Dimensionality, Form, \
+    SemanticType, \
     MotionType, MotionClass
 
 MAX_LENGTH = 50
+NONE_WORDS = ["SPACE", "PUNCT", "SYM", "."]
 
 nlp = spacy.load("en_core_web_sm")
 tokenizer = BertTokenizer.from_pretrained(
@@ -43,15 +45,15 @@ def extract_data(data_type):
             for word in sentence:
 
                 # filter non words
-                if word.pos_ not in ["SPACE", "PUNCT", "SYM", "."]:
+                if word.pos_ not in NONE_WORDS:
+                    # create embeddings
+                    tokens = tokenizer.tokenize(word.text)
+                    token_ids = tokenizer.convert_tokens_to_ids(tokens)
+
                     # find corresponding iso space entity
                     entity = next(
                         (e for e in entities if
                          word.idx in e.interval), Entity(None))
-
-                    # create embeddings
-                    tokens = tokenizer.tokenize(word.text)
-                    token_ids = tokenizer.convert_tokens_to_ids(tokens)
 
                     # append token-label pair to sentence
                     current_sentence.extend(
@@ -96,7 +98,7 @@ def pad_sentence(sentence, padding):
         else sentence + [padding] * (MAX_LENGTH - length))
 
 
-class AnnotatedDataset(Dataset):
+class TextDataset(Dataset):
 
     def __init__(self, data_type):
         # load annotated data if available else extract data from xml files
@@ -124,6 +126,17 @@ class AnnotatedDataset(Dataset):
 
     def __len__(self):
         # get length of dataset
-
         return len(self.sentences)
 
+
+def get_test_data():
+    text = ""
+    xml_files = glob.glob(
+        os.path.join("data", "test", "**", "*.xml"),
+        recursive=True)
+
+    for xml_file in xml_files:
+        tree = ET.parse(xml_file)
+        text += tree.find("TEXT").text
+
+    return text

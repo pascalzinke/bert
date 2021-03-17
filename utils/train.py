@@ -8,7 +8,7 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 import utils.isospace as iso
-from utils.model import BertForAttributeClassification
+from utils.model import BertForIsoSpaceClassification
 
 
 class TrainerConfig:
@@ -21,7 +21,7 @@ class TrainerConfig:
 class Trainer:
 
     def __init__(self, attribute, config, epochs, lr=3e-5, keep_none=False):
-        self.model = BertForAttributeClassification(attribute)
+        self.model = BertForIsoSpaceClassification(attribute)
         self.config = config
         self.keep_none = keep_none
         self.attribute = attribute

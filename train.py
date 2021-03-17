@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 
 import utils.isospace as iso
 from utils.cuda import get_device
-from utils.data import AnnotatedDataset
+from utils.data import TextDataset
 from utils.train import Trainer, TrainerConfig
 
 BATCH = 8
@@ -10,8 +10,8 @@ EPOCHS = 10
 
 device = get_device()
 
-train_set = AnnotatedDataset("train")
-eval_set = AnnotatedDataset("eval")
+train_set = TextDataset("train")
+eval_set = TextDataset("eval")
 
 train_loader = DataLoader(train_set, batch_size=BATCH)
 eval_loader = DataLoader(eval_set, batch_size=BATCH)
