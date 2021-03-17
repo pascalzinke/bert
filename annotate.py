@@ -5,8 +5,6 @@ annotator = TextAnnotator()
 
 text = get_test_data()
 
-text1 = annotator.annotate(text)
-text2 = annotator.annotate("Peter runs to the house across the street.")
+annotated_text = annotator.annotate(text)
 
-print(text1)
-print(text2)
+print(annotated_text)
