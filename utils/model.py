@@ -17,15 +17,9 @@ class BertForAttributeClassification(nn.Module):
 
         self.bert = BertModel.from_pretrained(
             BERT_MODEL, add_pooling_layer=False)
-
+        self.dropout = nn.Dropout(0.1)
         self.classifier = nn.Linear(
             BERT_LAST_LAYER, attribute.num_values)
-
-        for param in self.bert.parameters():
-            param.requires_grad = False
-
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
 
     def forward(self, input_ids, mask=None):
         outputs = self.bert(input_ids, attention_mask=mask)[0]

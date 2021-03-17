@@ -3,10 +3,10 @@ from torch.utils.data import DataLoader
 import utils.isospace as iso
 from utils.cuda import get_device
 from utils.data import AnnotatedDataset
-from utils.train import AttributeTrainer, TrainerConfig, SpatialElementTrainer
+from utils.train import Trainer, TrainerConfig
 
 BATCH = 8
-EPOCHS = 20
+EPOCHS = 10
 
 device = get_device()
 
@@ -18,11 +18,16 @@ eval_loader = DataLoader(eval_set, batch_size=BATCH)
 
 config = TrainerConfig(device, train_loader, eval_loader)
 
-# spatial_element_trainer = SpatialElementTrainer(config, 2)
-# dimensionality_trainer = Trainer(iso.Dimensionality, config, 12)
-form_trainer = AttributeTrainer(iso.Form, config, 2)
-# semantic_type_trainer = Trainer(iso.SemanticType, config, 12)
-# motion_type_trainer = Trainer(iso.MotionType, config, 12)
-# motion_class_trainer = Trainer(iso.MotionClass, config, 12)
+spatial_element_trainer = Trainer(iso.SpatialElement, config, EPOCHS, keep_none=True)
+dimensionality_trainer = Trainer(iso.Dimensionality, config, EPOCHS)
+form_trainer = Trainer(iso.Form, config, EPOCHS)
+semantic_type_trainer = Trainer(iso.SemanticType, config, EPOCHS)
+motion_type_trainer = Trainer(iso.MotionType, config, EPOCHS)
+motion_class_trainer = Trainer(iso.MotionClass, config, EPOCHS)
 
+spatial_element_trainer.train()
+dimensionality_trainer.train()
 form_trainer.train()
+semantic_type_trainer.train()
+motion_type_trainer.train()
+motion_class_trainer.train()
