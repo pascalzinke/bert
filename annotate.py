@@ -9,7 +9,6 @@ from transformers import BertTokenizer
 
 from utils.isospace import SpatialElement, Dimensionality, Form, SemanticType, \
     MotionType, MotionClass
-from utils.model import BertForSpatialElementClassification
 
 model = BertForSpatialElementClassification()
 model.load()
