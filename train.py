@@ -6,7 +6,7 @@ from utils.data import TextDataset
 from utils.train import Trainer, TrainerConfig
 
 BATCH = 8
-EPOCHS = 10
+EPOCHS = 20
 
 device = get_device()
 
