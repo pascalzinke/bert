@@ -9,9 +9,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 from transformers import BertTokenizer
 
-from utils.isospace import Entity, SpatialElement, Dimensionality, Form, \
-    SemanticType, \
-    MotionType, MotionClass
+import utils.isospace as iso
 
 MAX_LENGTH = 50
 NONE_WORDS = ["SPACE", "PUNCT", "SYM", "."]
@@ -26,7 +24,7 @@ tokenizer = BertTokenizer.from_pretrained(
 def extract_data(data_type):
     sentences = []
 
-    # read all xml files
+    # Read all xml files
     xml_files = glob.glob(
         os.path.join("data", data_type, "**", "*.xml"),
         recursive=True
@@ -35,27 +33,28 @@ def extract_data(data_type):
     for xml_file in tqdm(xml_files, desc=desc):
         tree = ET.parse(xml_file)
 
-        # initialize iso space helper entities from annotated xml tags
-        entities = [Entity(tag) for tag in tree.find("TAGS")]
+        # Initialize iso space helper entities from annotated xml tags
+        entities = [iso.IsoSpaceElement(tag) for tag in tree.find("TAGS")]
 
-        # tokenize test with spacy
+        # Tokenize test with spacy
         text = tree.find("TEXT").text
         for sentence in nlp(text).sents:
             current_sentence = []
             for word in sentence:
 
-                # filter non words
+                # Filter none words
                 if word.pos_ not in NONE_WORDS:
-                    # create embeddings
+                    # Tokenize with bert tokenizer
                     tokens = tokenizer.tokenize(word.text)
                     token_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-                    # find corresponding iso space entity
+                    # Find corresponding iso space entity
                     entity = next(
                         (e for e in entities if
-                         word.idx in e.interval), Entity(None))
+                         word.idx in e.interval), iso.IsoSpaceElement(None))
 
-                    # append token-label pair to sentence
+                    # Append token, spatial element type, and attribute values
+                    # to sentence
                     current_sentence.extend(
                         [[
                             token_id,
@@ -68,18 +67,18 @@ def extract_data(data_type):
                         ] for token_id in token_ids]
                     )
 
-            # pad/cut sentences to constant size
+            # Pad/cut sentences to a constant size
             sentences.append(pad_sentence(current_sentence, [
                 0,
-                SpatialElement.pad,
-                Dimensionality.pad,
-                Form.pad,
-                SemanticType.pad,
-                MotionType.pad,
-                MotionClass.pad,
+                iso.SpatialElement.pad,
+                iso.Dimensionality.pad,
+                iso.Form.pad,
+                iso.SemanticType.pad,
+                iso.MotionType.pad,
+                iso.MotionClass.pad,
             ]))
 
-    # save extracted data to file
+    # Cache extracted data
     data = np.array(sentences)
     np.save(get_data_path_name(data_type), data)
     return data
@@ -90,7 +89,7 @@ def get_data_path_name(data_type):
 
 
 def pad_sentence(sentence, padding):
-    # pad or cut sentence to constant size
+    # Pad or cut sentence to a constant size
     length = len(sentence)
     return (
         sentence[:MAX_LENGTH]
@@ -101,7 +100,7 @@ def pad_sentence(sentence, padding):
 class TextDataset(Dataset):
 
     def __init__(self, evaluate=False):
-        # load annotated data if available else extract data from xml files
+        # Load cached data if available else extract data from xml files
         data_type = "eval" if evaluate else "train"
         path = get_data_path_name(data_type)
         self.sentences = (
@@ -111,33 +110,33 @@ class TextDataset(Dataset):
         pass
 
     def __getitem__(self, idx):
-        # get sentence
+        # Returns token, spatial element type, and attribute values as a
+        # dictionary. Needed for pytorch DataLoader
+        # Creates a mask for padded sentences
         sentence = self.sentences[idx]
         ids = torch.tensor(sentence[:, 0], dtype=torch.long)
         return {
             "token_ids": ids,
             "mask": torch.tensor([int(i != 0) for i in ids], dtype=torch.long),
-            SpatialElement.id: torch.tensor(sentence[:, 1], dtype=torch.long),
-            Dimensionality.id: torch.tensor(sentence[:, 2], dtype=torch.long),
-            Form.id: torch.tensor(sentence[:, 3], dtype=torch.long),
-            SemanticType.id: torch.tensor(sentence[:, 4], dtype=torch.long),
-            MotionType.id: torch.tensor(sentence[:, 5], dtype=torch.long),
-            MotionClass.id: torch.tensor(sentence[:, 6], dtype=torch.long),
+            iso.SpatialElement.id: torch.tensor(sentence[:, 1], dtype=torch.long),
+            iso.Dimensionality.id: torch.tensor(sentence[:, 2], dtype=torch.long),
+            iso.Form.id: torch.tensor(sentence[:, 3], dtype=torch.long),
+            iso.SemanticType.id: torch.tensor(sentence[:, 4], dtype=torch.long),
+            iso.MotionType.id: torch.tensor(sentence[:, 5], dtype=torch.long),
+            iso.MotionClass.id: torch.tensor(sentence[:, 6], dtype=torch.long),
         }
 
     def __len__(self):
-        # get length of dataset
         return len(self.sentences)
 
 
 def get_test_data():
+    # Since test data has no annotations, extraction is much simpler
     text = ""
     xml_files = glob.glob(
         os.path.join("data", "test", "**", "*.xml"),
         recursive=True)
-
     for xml_file in xml_files:
         tree = ET.parse(xml_file)
         text += tree.find("TEXT").text
-
     return text
