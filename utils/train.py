@@ -20,7 +20,9 @@ class TrainerConfig:
 
 class Trainer:
 
-    def __init__(self, attribute, config, epochs, lr=3e-5, keep_none=False):
+    def __init__(
+            self, attribute, config,
+            epochs=20, lr=3e-5, eps=1e-8, keep_none=False):
         self.model = BertForIsoSpaceClassification(attribute)
         self.config = config
         self.keep_none = keep_none
@@ -38,7 +40,7 @@ class Trainer:
              'weight_decay_rate': 0.0}
         ]
         self.optimizer = AdamW(
-            optimizer_grouped_parameters, lr=lr, eps=1e-8)
+            optimizer_grouped_parameters, lr=lr, eps=eps)
 
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,

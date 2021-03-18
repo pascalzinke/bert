@@ -6,24 +6,23 @@ from utils.data import TextDataset
 from utils.train import Trainer, TrainerConfig
 
 BATCH = 8
-EPOCHS = 20
 
 device = get_device()
 
-train_set = TextDataset("train")
-eval_set = TextDataset("eval")
+train_set = TextDataset()
+eval_set = TextDataset(evaluate=True)
 
 train_loader = DataLoader(train_set, batch_size=BATCH)
 eval_loader = DataLoader(eval_set, batch_size=BATCH)
 
 config = TrainerConfig(device, train_loader, eval_loader)
 
-spatial_element_trainer = Trainer(iso.SpatialElement, config, EPOCHS, keep_none=True)
-dimensionality_trainer = Trainer(iso.Dimensionality, config, EPOCHS)
-form_trainer = Trainer(iso.Form, config, EPOCHS)
-semantic_type_trainer = Trainer(iso.SemanticType, config, EPOCHS)
-motion_type_trainer = Trainer(iso.MotionType, config, EPOCHS)
-motion_class_trainer = Trainer(iso.MotionClass, config, EPOCHS)
+spatial_element_trainer = Trainer(iso.SpatialElement, config, keep_none=True)
+dimensionality_trainer = Trainer(iso.Dimensionality, config)
+form_trainer = Trainer(iso.Form, config)
+semantic_type_trainer = Trainer(iso.SemanticType, config)
+motion_type_trainer = Trainer(iso.MotionType, config)
+motion_class_trainer = Trainer(iso.MotionClass, config)
 
 spatial_element_trainer.train()
 dimensionality_trainer.train()

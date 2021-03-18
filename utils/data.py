@@ -100,8 +100,9 @@ def pad_sentence(sentence, padding):
 
 class TextDataset(Dataset):
 
-    def __init__(self, data_type):
+    def __init__(self, evaluate=False):
         # load annotated data if available else extract data from xml files
+        data_type = "eval" if evaluate else "train"
         path = get_data_path_name(data_type)
         self.sentences = (
             np.load(path)
